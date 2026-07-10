@@ -8,7 +8,14 @@ export async function GET(request) {
   const { searchParams } = new URL(request.url);
   const fecha = searchParams.get("fecha");
 
-  const orders = await getOrders();
+  let orders;
+  try {
+    orders = await getOrders();
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
+
   const filtered = fecha ? orders.filter((o) => o.fecha === fecha) : orders;
   filtered.sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || ""));
 
@@ -61,19 +68,24 @@ export async function POST(request) {
     );
   }
 
-  const orders = await getOrders();
-  const newOrder = {
-    id: crypto.randomUUID(),
-    fecha,
-    cliente: cliente.trim(),
-    comida,
-    sabores,
-    estatus: STATUSES[0],
-    createdAt: new Date().toISOString(),
-  };
+  try {
+    const orders = await getOrders();
+    const newOrder = {
+      id: crypto.randomUUID(),
+      fecha,
+      cliente: cliente.trim(),
+      comida,
+      sabores,
+      estatus: STATUSES[0],
+      createdAt: new Date().toISOString(),
+    };
 
-  orders.push(newOrder);
-  await saveOrders(orders);
+    orders.push(newOrder);
+    await saveOrders(orders);
 
-  return NextResponse.json({ order: newOrder }, { status: 201 });
+    return NextResponse.json({ order: newOrder }, { status: 201 });
+  } catch (err) {
+    console.error(err);
+    return NextResponse.json({ error: err.message }, { status: 500 });
+  }
 }
