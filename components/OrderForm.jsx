@@ -2,7 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
-import { FLAVORS, COMBO_SIZE, FOOD_TYPES } from "@/lib/constants";
+import { FLAVORS, COMBO_SIZE, MAX_UNITS_PER_ORDER, FOOD_TYPES } from "@/lib/constants";
 
 function todayISO() {
   const d = new Date();
@@ -19,22 +19,31 @@ export default function OrderForm() {
   const [fecha, setFecha] = useState(todayISO());
   const [cliente, setCliente] = useState("");
   const [comida, setComida] = useState("Empanada");
+  const [unitCount, setUnitCount] = useState(COMBO_SIZE.Empanada);
   const [quantities, setQuantities] = useState(emptyQuantities());
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
 
-  const comboSize = COMBO_SIZE[comida];
+  const defaultSize = COMBO_SIZE[comida];
   const totalSelected = Object.values(quantities).reduce((a, b) => a + b, 0);
-  const isComplete = totalSelected === comboSize;
+  const isComplete = totalSelected === unitCount;
 
   function handleComidaChange(value) {
     setComida(value);
+    setUnitCount(COMBO_SIZE[value]);
+    setQuantities(emptyQuantities());
+  }
+
+  function changeUnitCount(delta) {
+    const next = Math.min(MAX_UNITS_PER_ORDER, Math.max(defaultSize, unitCount + delta));
+    if (next === unitCount) return;
+    setUnitCount(next);
     setQuantities(emptyQuantities());
   }
 
   function increment(flavor) {
-    if (totalSelected >= comboSize) return;
+    if (totalSelected >= unitCount) return;
     setQuantities((prev) => ({ ...prev, [flavor]: prev[flavor] + 1 }));
   }
 
@@ -49,7 +58,7 @@ export default function OrderForm() {
     setSuccess("");
 
     if (!isComplete) {
-      setError(`Selecciona ${comboSize} sabores en total (puedes repetir).`);
+      setError(`Selecciona ${unitCount} sabores en total (puedes repetir).`);
       return;
     }
 
@@ -67,6 +76,7 @@ export default function OrderForm() {
 
       setSuccess("¡Pedido guardado!");
       setCliente("");
+      setUnitCount(COMBO_SIZE[comida]);
       setQuantities(emptyQuantities());
       router.refresh();
     } catch (err) {
@@ -133,6 +143,38 @@ export default function OrderForm() {
         </div>
       </div>
 
+      <div>
+        <span className="text-sm font-medium text-slate-600">
+          Cantidad de unidades{" "}
+          <span className="font-normal text-slate-400">
+            (por defecto {defaultSize}, se puede aumentar por excepción)
+          </span>
+        </span>
+        <div className="mt-1 flex items-center gap-3">
+          <button
+            type="button"
+            onClick={() => changeUnitCount(-1)}
+            disabled={unitCount <= defaultSize}
+            aria-label="Quitar unidad"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-30"
+          >
+            −
+          </button>
+          <span className="w-6 text-center text-lg font-bold text-slate-800">
+            {unitCount}
+          </span>
+          <button
+            type="button"
+            onClick={() => changeUnitCount(1)}
+            disabled={unitCount >= MAX_UNITS_PER_ORDER}
+            aria-label="Agregar unidad"
+            className="flex h-8 w-8 items-center justify-center rounded-full border border-orange-400 text-orange-600 transition-colors hover:bg-orange-100 disabled:opacity-30"
+          >
+            +
+          </button>
+        </div>
+      </div>
+
       <div className="space-y-2">
         <div
           className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold ${
@@ -143,7 +185,7 @@ export default function OrderForm() {
         >
           <span>Sabores seleccionados (puedes repetir)</span>
           <span>
-            {totalSelected} / {comboSize}
+            {totalSelected} / {unitCount}
           </span>
         </div>
 
@@ -176,7 +218,7 @@ export default function OrderForm() {
                   <button
                     type="button"
                     onClick={() => increment(f)}
-                    disabled={totalSelected >= comboSize}
+                    disabled={totalSelected >= unitCount}
                     aria-label={`Agregar ${f}`}
                     className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-400 text-orange-600 transition-colors hover:bg-orange-100 disabled:opacity-30"
                   >

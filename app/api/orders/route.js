@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getOrders, saveOrders } from "@/lib/orders-store";
-import { COMBO_SIZE, FOOD_TYPES, FLAVORS, STATUSES } from "@/lib/constants";
+import { COMBO_SIZE, MAX_UNITS_PER_ORDER, FOOD_TYPES, FLAVORS, STATUSES } from "@/lib/constants";
 
 // GET /api/orders            -> todos los pedidos
 // GET /api/orders?fecha=YYYY-MM-DD -> pedidos de una fecha puntual
@@ -39,10 +39,18 @@ export async function POST(request) {
     );
   }
 
-  const expectedCount = COMBO_SIZE[comida];
-  if (!Array.isArray(sabores) || sabores.length !== expectedCount) {
+  // El combo por defecto es un mínimo; se permite agregar unidades extra
+  // como excepción (ej. 4 empanadas en vez de 3), hasta un tope de seguridad.
+  const minCount = COMBO_SIZE[comida];
+  if (
+    !Array.isArray(sabores) ||
+    sabores.length < minCount ||
+    sabores.length > MAX_UNITS_PER_ORDER
+  ) {
     return NextResponse.json(
-      { error: `Debes elegir exactamente ${expectedCount} sabores para ${comida}.` },
+      {
+        error: `La cantidad de sabores para ${comida} debe ser entre ${minCount} (combo por defecto) y ${MAX_UNITS_PER_ORDER}.`,
+      },
       { status: 400 }
     );
   }
