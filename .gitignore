@@ -32,9 +32,13 @@ yarn-error.log*
 
 # env files (can opt-in for committing if needed)
 .env*
+!.env.local.example
 
 # vercel
 .vercel
+
+# datos locales de pedidos (fallback cuando no hay Vercel Blob configurado)
+/data/*.json
 
 # typescript
 *.tsbuildinfo

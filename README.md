@@ -1,36 +1,71 @@
-This is a [Next.js](https://nextjs.org) project bootstrapped with [`create-next-app`](https://github.com/vercel/next.js/tree/canary/packages/create-next-app).
+# Pedidos de Comidas
 
-## Getting Started
+App web responsive para gestionar pedidos de empanadas y arepas por encargo:
+control por fecha, cliente y cantidad, con dashboard de totales por día y
+estatus de cada pedido (Pendiente, Pagado).
 
-First, run the development server:
+## Reglas del negocio
+
+- **Empanada** → combo de **3** unidades.
+- **Arepa** → combo de **2** unidades.
+- Sabores disponibles (uno por unidad del combo): Molida, Pollo, Queso,
+  Carne con queso, Queso con tocineta.
+- Estatus de un pedido: Pendiente → Pagado.
+
+## Cómo se guardan los datos
+
+- **En tu computador (desarrollo):** si no configuras nada, los pedidos se
+  guardan en el archivo `data/orders.json` dentro del proyecto, tal como se
+  pidió originalmente.
+- **En Vercel (producción):** el sistema de archivos de Vercel es de solo
+  lectura para las funciones que atienden tus peticiones, así que un
+  `orders.json` local **no persistiría** ahí. Por eso, en producción la app
+  usa automáticamente **Vercel Blob** (plan gratis) para guardar ese mismo
+  `orders.json` de forma duradera. El cambio es transparente: mismo formato
+  de datos, solo cambia dónde vive el archivo.
+
+La app detecta sola cuál usar: si existe la variable de entorno
+`BLOB_READ_WRITE_TOKEN`, usa Blob; si no, usa el archivo local.
+
+## Desarrollo local
 
 ```bash
+npm install
 npm run dev
-# or
-yarn dev
-# or
-pnpm dev
-# or
-bun dev
 ```
 
-Open [http://localhost:3000](http://localhost:3000) with your browser to see the result.
+Abre http://localhost:3000. Los pedidos quedarán en `data/orders.json`
+(no se sube a git).
 
-You can start editing the page by modifying `app/page.js`. The page auto-updates as you edit the file.
+## Publicar en Vercel (gratis)
 
-This project uses [`next/font`](https://nextjs.org/docs/app/building-your-application/optimizing/fonts) to automatically optimize and load [Geist](https://vercel.com/font), a new font family for Vercel.
+1. Sube este proyecto a un repositorio de GitHub.
+2. En https://vercel.com, "Add New Project" e importa el repo. Vercel
+   detecta Next.js automáticamente, no hay que tocar nada.
+3. **Antes o después del primer deploy**, entra al proyecto en Vercel →
+   pestaña **Storage** → **Create Database** → **Blob** → conéctalo al
+   proyecto. Esto crea la variable `BLOB_READ_WRITE_TOKEN` automáticamente.
+4. Vuelve a desplegar (o el primer deploy ya la tomará si conectaste el
+   Blob Store antes). Listo: los pedidos ahora persisten en producción.
 
-## Learn More
+Si en algún momento quieres probar el modo Blob desde tu computador:
 
-To learn more about Next.js, take a look at the following resources:
+```bash
+vercel env pull .env.local
+```
 
-- [Next.js Documentation](https://nextjs.org/docs) - learn about Next.js features and API.
-- [Learn Next.js](https://nextjs.org/learn) - an interactive Next.js tutorial.
+Esto trae la variable `BLOB_READ_WRITE_TOKEN` a tu entorno local.
 
-You can check out [the Next.js GitHub repository](https://github.com/vercel/next.js) - your feedback and contributions are welcome!
+## Estructura relevante
 
-## Deploy on Vercel
-
-The easiest way to deploy your Next.js app is to use the [Vercel Platform](https://vercel.com/new?utm_medium=default-template&filter=next.js&utm_source=create-next-app&utm_campaign=create-next-app-readme) from the creators of Next.js.
-
-Check out our [Next.js deployment documentation](https://nextjs.org/docs/app/building-your-application/deploying) for more details.
+- `lib/constants.js` — catálogo de sabores, tipos de comida, tamaños de
+  combo y estatus.
+- `lib/orders-store.js` — capa de datos (Blob en producción, JSON local en
+  desarrollo).
+- `app/api/orders/route.js` — listar (`GET`, con filtro `?fecha=`) y crear
+  (`POST`) pedidos.
+- `app/api/orders/[id]/route.js` — cambiar estatus (`PATCH`) y eliminar
+  (`DELETE`) un pedido.
+- `components/Dashboard.jsx` — dashboard por fecha (totales, sabores,
+  estatus, detalle de pedidos).
+- `components/OrderForm.jsx` — formulario de nuevo pedido.

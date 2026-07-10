@@ -1,0 +1,210 @@
+"use client";
+
+import { useState } from "react";
+import { useRouter } from "next/navigation";
+import { FLAVORS, COMBO_SIZE, FOOD_TYPES } from "@/lib/constants";
+
+function todayISO() {
+  const d = new Date();
+  const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
+  return local.toISOString().slice(0, 10);
+}
+
+function emptyQuantities() {
+  return Object.fromEntries(FLAVORS.map((f) => [f, 0]));
+}
+
+export default function OrderForm() {
+  const router = useRouter();
+  const [fecha, setFecha] = useState(todayISO());
+  const [cliente, setCliente] = useState("");
+  const [comida, setComida] = useState("Empanada");
+  const [quantities, setQuantities] = useState(emptyQuantities());
+  const [submitting, setSubmitting] = useState(false);
+  const [error, setError] = useState("");
+  const [success, setSuccess] = useState("");
+
+  const comboSize = COMBO_SIZE[comida];
+  const totalSelected = Object.values(quantities).reduce((a, b) => a + b, 0);
+  const isComplete = totalSelected === comboSize;
+
+  function handleComidaChange(value) {
+    setComida(value);
+    setQuantities(emptyQuantities());
+  }
+
+  function increment(flavor) {
+    if (totalSelected >= comboSize) return;
+    setQuantities((prev) => ({ ...prev, [flavor]: prev[flavor] + 1 }));
+  }
+
+  function decrement(flavor) {
+    if (quantities[flavor] === 0) return;
+    setQuantities((prev) => ({ ...prev, [flavor]: prev[flavor] - 1 }));
+  }
+
+  async function handleSubmit(e) {
+    e.preventDefault();
+    setError("");
+    setSuccess("");
+
+    if (!isComplete) {
+      setError(`Selecciona ${comboSize} sabores en total (puedes repetir).`);
+      return;
+    }
+
+    const sabores = FLAVORS.flatMap((f) => Array(quantities[f]).fill(f));
+
+    setSubmitting(true);
+    try {
+      const res = await fetch("/api/orders", {
+        method: "POST",
+        headers: { "Content-Type": "application/json" },
+        body: JSON.stringify({ fecha, cliente, comida, sabores }),
+      });
+      const data = await res.json();
+      if (!res.ok) throw new Error(data.error || "No se pudo guardar el pedido.");
+
+      setSuccess("¡Pedido guardado!");
+      setCliente("");
+      setQuantities(emptyQuantities());
+      router.refresh();
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setSubmitting(false);
+    }
+  }
+
+  return (
+    <form
+      onSubmit={handleSubmit}
+      className="mx-auto max-w-lg space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
+    >
+      <h1 className="text-xl font-bold">Nuevo pedido</h1>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="flex flex-col text-sm font-medium text-slate-600">
+          Fecha
+          <input
+            type="date"
+            required
+            value={fecha}
+            onChange={(e) => setFecha(e.target.value)}
+            className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col text-sm font-medium text-slate-600">
+          Cliente
+          <input
+            type="text"
+            required
+            value={cliente}
+            onChange={(e) => setCliente(e.target.value)}
+            placeholder="Nombre del cliente"
+            className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
+          />
+        </label>
+      </div>
+
+      <div>
+        <span className="text-sm font-medium text-slate-600">Comida</span>
+        <div className="mt-1 flex gap-3">
+          {FOOD_TYPES.map((f) => (
+            <label
+              key={f}
+              className={`flex-1 cursor-pointer rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                comida === f
+                  ? "border-orange-500 bg-orange-50 text-orange-700"
+                  : "border-slate-300 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="comida"
+                value={f}
+                checked={comida === f}
+                onChange={() => handleComidaChange(f)}
+                className="sr-only"
+              />
+              {f} ({COMBO_SIZE[f]} en el combo)
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div className="space-y-2">
+        <div
+          className={`flex items-center justify-between rounded-lg border px-3 py-2 text-sm font-semibold ${
+            isComplete
+              ? "border-emerald-300 bg-emerald-50 text-emerald-700"
+              : "border-amber-300 bg-amber-50 text-amber-700"
+          }`}
+        >
+          <span>Sabores seleccionados (puedes repetir)</span>
+          <span>
+            {totalSelected} / {comboSize}
+          </span>
+        </div>
+
+        <div className="grid grid-cols-1 gap-2 sm:grid-cols-2">
+          {FLAVORS.map((f) => {
+            const count = quantities[f];
+            return (
+              <div
+                key={f}
+                className={`flex items-center justify-between rounded-lg border p-3 transition-colors ${
+                  count > 0
+                    ? "border-orange-400 bg-orange-50"
+                    : "border-slate-200"
+                }`}
+              >
+                <span className="text-sm font-medium text-slate-700">{f}</span>
+                <div className="flex items-center gap-2">
+                  <button
+                    type="button"
+                    onClick={() => decrement(f)}
+                    disabled={count === 0}
+                    aria-label={`Quitar ${f}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-30"
+                  >
+                    −
+                  </button>
+                  <span className="w-4 text-center font-semibold text-slate-800">
+                    {count}
+                  </span>
+                  <button
+                    type="button"
+                    onClick={() => increment(f)}
+                    disabled={totalSelected >= comboSize}
+                    aria-label={`Agregar ${f}`}
+                    className="flex h-7 w-7 items-center justify-center rounded-full border border-orange-400 text-orange-600 transition-colors hover:bg-orange-100 disabled:opacity-30"
+                  >
+                    +
+                  </button>
+                </div>
+              </div>
+            );
+          })}
+        </div>
+      </div>
+
+      {error && (
+        <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
+      )}
+      {success && (
+        <p className="rounded-lg bg-emerald-50 px-4 py-2 text-sm text-emerald-700">
+          {success}
+        </p>
+      )}
+
+      <button
+        type="submit"
+        disabled={submitting || !isComplete}
+        className="w-full rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-orange-700 disabled:opacity-60"
+      >
+        {submitting ? "Guardando…" : "Guardar pedido"}
+      </button>
+    </form>
+  );
+}
