@@ -29,6 +29,11 @@ function quantitiesFromSabores(sabores) {
   return q;
 }
 
+// Capitaliza la primera letra de cada palabra (ej. "juan perez" -> "Juan Perez").
+function toTitleCase(str) {
+  return str.toLowerCase().replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
+}
+
 // Sin `order`, el formulario crea un pedido nuevo (POST). Con `order`, edita
 // ese pedido existente (PATCH) — solo se debe montar así mientras esté
 // en estatus Pendiente, esa regla la aplica la pantalla que lo invoca.
@@ -149,7 +154,7 @@ export default function OrderForm({ order = null }) {
             type="text"
             required
             value={cliente}
-            onChange={(e) => setCliente(e.target.value)}
+            onChange={(e) => setCliente(toTitleCase(e.target.value))}
             placeholder="Nombre del cliente"
             className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
           />
