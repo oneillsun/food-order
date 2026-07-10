@@ -1,7 +1,8 @@
 "use client";
 
 import { useEffect, useMemo, useState } from "react";
-import { FLAVORS, STATUSES } from "@/lib/constants";
+import Link from "next/link";
+import { FLAVORS, STATUSES, PRICE_PER_ORDER } from "@/lib/constants";
 
 function todayISO() {
   const d = new Date();
@@ -76,6 +77,7 @@ export default function Dashboard() {
       Empanada: Object.values(s.saboresPorComida.Empanada).reduce((a, b) => a + b, 0),
       Arepa: Object.values(s.saboresPorComida.Arepa).reduce((a, b) => a + b, 0),
     };
+    s.totalEstimado = s.total * PRICE_PER_ORDER;
     return s;
   }, [dayOrders]);
 
@@ -159,11 +161,48 @@ export default function Dashboard() {
         <p className="text-slate-500">Cargando pedidos…</p>
       ) : (
         <>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <SummaryCard label="Total pedidos" value={summary.total} highlight />
-            <SummaryCard label="Empanadas" value={summary.Empanada} />
-            <SummaryCard label="Arepas" value={summary.Arepa} />
-            <SummaryCard label="Pendientes" value={summary.estatus.Pendiente} />
+          <div className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Cobro estimado
+            </h2>
+            <div className="grid grid-cols-1">
+              <SummaryCard
+                value={`$${summary.totalEstimado}`}
+                tone="green"
+                icon="💵"
+              />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Pedidos
+            </h2>
+            <div className="grid grid-cols-3 gap-3">
+              <SummaryCard label="Total" value={summary.total} tone="orange" icon="🧾" />
+              <SummaryCard label="Pedidos Empanadas" value={summary.Empanada} icon="🥟" />
+              <SummaryCard label="Pedidos Arepas" value={summary.Arepa} icon="🫓" />
+            </div>
+          </div>
+
+          <div className="space-y-2">
+            <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
+              Estatus
+            </h2>
+            <div className="grid grid-cols-2 gap-3">
+              <SummaryCard
+                label="Pendientes"
+                value={summary.estatus.Pendiente}
+                tone="orange"
+                icon="⏳"
+              />
+              <SummaryCard
+                label="Pagados"
+                value={summary.estatus.Pagado}
+                tone="green"
+                icon="✅"
+              />
+            </div>
           </div>
 
           <div className="grid gap-4 md:grid-cols-3">
@@ -254,6 +293,14 @@ export default function Dashboard() {
                             </option>
                           ))}
                         </select>
+                        {o.estatus === "Pendiente" && (
+                          <Link
+                            href={`/pedidos/${o.id}/editar`}
+                            className="rounded-lg border border-sky-200 px-2 py-1 text-xs font-medium text-sky-700 hover:bg-sky-50"
+                          >
+                            Editar
+                          </Link>
+                        )}
                         <button
                           type="button"
                           onClick={() => removeOrder(o.id)}
@@ -275,14 +322,23 @@ export default function Dashboard() {
   );
 }
 
-function SummaryCard({ label, value, highlight }) {
+const CARD_TONE_STYLES = {
+  neutral: "border-slate-200 bg-white",
+  orange: "border-orange-300 bg-orange-50",
+  green: "border-emerald-300 bg-emerald-50",
+};
+
+function SummaryCard({ label, value, tone = "neutral", icon }) {
   return (
-    <div
-      className={`rounded-xl border p-4 ${
-        highlight ? "border-orange-300 bg-orange-50" : "border-slate-200 bg-white"
-      }`}
-    >
-      <p className="text-xs font-medium text-slate-500">{label}</p>
+    <div className={`rounded-xl border p-4 ${CARD_TONE_STYLES[tone]}`}>
+      <div className="flex items-center gap-1.5">
+        {icon && (
+          <span className="text-base" aria-hidden="true">
+            {icon}
+          </span>
+        )}
+        {label && <p className="text-xs font-medium text-slate-500">{label}</p>}
+      </div>
       <p className="text-2xl font-bold text-slate-800">{value}</p>
     </div>
   );

@@ -2,6 +2,7 @@
 
 import { useState } from "react";
 import { useRouter } from "next/navigation";
+import Link from "next/link";
 import { FLAVORS, COMBO_SIZE, MAX_UNITS_PER_ORDER, FOOD_TYPES } from "@/lib/constants";
 
 function todayISO() {
@@ -14,13 +15,28 @@ function emptyQuantities() {
   return Object.fromEntries(FLAVORS.map((f) => [f, 0]));
 }
 
-export default function OrderForm() {
+function quantitiesFromSabores(sabores) {
+  const q = emptyQuantities();
+  for (const s of sabores) {
+    if (q[s] !== undefined) q[s] += 1;
+  }
+  return q;
+}
+
+// Sin `order`, el formulario crea un pedido nuevo (POST). Con `order`, edita
+// ese pedido existente (PATCH) — solo se debe montar así mientras esté
+// en estatus Pendiente, esa regla la aplica la pantalla que lo invoca.
+export default function OrderForm({ order = null }) {
   const router = useRouter();
-  const [fecha, setFecha] = useState(todayISO());
-  const [cliente, setCliente] = useState("");
-  const [comida, setComida] = useState("Empanada");
-  const [unitCount, setUnitCount] = useState(COMBO_SIZE.Empanada);
-  const [quantities, setQuantities] = useState(emptyQuantities());
+  const isEditing = Boolean(order);
+
+  const [fecha, setFecha] = useState(order?.fecha ?? todayISO());
+  const [cliente, setCliente] = useState(order?.cliente ?? "");
+  const [comida, setComida] = useState(order?.comida ?? "Empanada");
+  const [unitCount, setUnitCount] = useState(order?.sabores.length ?? COMBO_SIZE.Empanada);
+  const [quantities, setQuantities] = useState(
+    order ? quantitiesFromSabores(order.sabores) : emptyQuantities()
+  );
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -66,13 +82,21 @@ export default function OrderForm() {
 
     setSubmitting(true);
     try {
-      const res = await fetch("/api/orders", {
-        method: "POST",
+      const url = isEditing ? `/api/orders/${order.id}` : "/api/orders";
+      const method = isEditing ? "PATCH" : "POST";
+      const res = await fetch(url, {
+        method,
         headers: { "Content-Type": "application/json" },
         body: JSON.stringify({ fecha, cliente, comida, sabores }),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar el pedido.");
+
+      if (isEditing) {
+        router.push("/");
+        router.refresh();
+        return;
+      }
 
       setSuccess("¡Pedido guardado!");
       setCliente("");
@@ -91,7 +115,7 @@ export default function OrderForm() {
       onSubmit={handleSubmit}
       className="mx-auto max-w-lg space-y-5 rounded-xl border border-slate-200 bg-white p-6 shadow-sm"
     >
-      <h1 className="text-xl font-bold">Nuevo pedido</h1>
+      <h1 className="text-xl font-bold">{isEditing ? "Editar pedido" : "Nuevo pedido"}</h1>
 
       <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
         <label className="flex flex-col text-sm font-medium text-slate-600">
@@ -240,13 +264,27 @@ export default function OrderForm() {
         </p>
       )}
 
-      <button
-        type="submit"
-        disabled={submitting || !isComplete}
-        className="w-full rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-orange-700 disabled:opacity-60"
-      >
-        {submitting ? "Guardando…" : "Guardar pedido"}
-      </button>
+      <div className="flex gap-3">
+        {isEditing && (
+          <Link
+            href="/"
+            className="flex-1 rounded-lg border border-slate-300 px-4 py-2 text-center font-semibold text-slate-600 transition-colors hover:bg-slate-50"
+          >
+            Cancelar
+          </Link>
+        )}
+        <button
+          type="submit"
+          disabled={submitting || !isComplete}
+          className="flex-1 rounded-lg bg-orange-600 px-4 py-2 font-semibold text-white transition-colors hover:bg-orange-700 disabled:opacity-60"
+        >
+          {submitting
+            ? "Guardando…"
+            : isEditing
+              ? "Guardar cambios"
+              : "Guardar pedido"}
+        </button>
+      </div>
     </form>
   );
 }
