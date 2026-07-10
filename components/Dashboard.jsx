@@ -193,12 +193,14 @@ export default function Dashboard() {
               <SummaryCard
                 label="Pendientes"
                 value={summary.estatus.Pendiente}
+                sub={`$${summary.estatus.Pendiente * PRICE_PER_ORDER}`}
                 tone="orange"
                 icon="⏳"
               />
               <SummaryCard
                 label="Pagados"
                 value={summary.estatus.Pagado}
+                sub={`$${summary.estatus.Pagado * PRICE_PER_ORDER}`}
                 tone="green"
                 icon="✅"
               />
@@ -328,7 +330,7 @@ const CARD_TONE_STYLES = {
   green: "border-emerald-300 bg-emerald-50",
 };
 
-function SummaryCard({ label, value, tone = "neutral", icon }) {
+function SummaryCard({ label, value, tone = "neutral", icon, sub }) {
   return (
     <div className={`rounded-xl border p-4 ${CARD_TONE_STYLES[tone]}`}>
       <div className="flex items-center gap-1.5">
@@ -340,6 +342,7 @@ function SummaryCard({ label, value, tone = "neutral", icon }) {
         {label && <p className="text-xs font-medium text-slate-500">{label}</p>}
       </div>
       <p className="text-2xl font-bold text-slate-800">{value}</p>
+      {sub && <p className="text-xs font-medium text-slate-500">{sub}</p>}
     </div>
   );
 }

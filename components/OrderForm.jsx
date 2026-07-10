@@ -3,7 +3,13 @@
 import { useState } from "react";
 import { useRouter } from "next/navigation";
 import Link from "next/link";
-import { FLAVORS, COMBO_SIZE, MAX_UNITS_PER_ORDER, FOOD_TYPES } from "@/lib/constants";
+import {
+  FLAVORS,
+  COMBO_SIZE,
+  MAX_UNITS_PER_ORDER,
+  MAX_COPIES_PER_SUBMIT,
+  FOOD_TYPES,
+} from "@/lib/constants";
 
 function todayISO() {
   const d = new Date();
@@ -37,6 +43,7 @@ export default function OrderForm({ order = null }) {
   const [quantities, setQuantities] = useState(
     order ? quantitiesFromSabores(order.sabores) : emptyQuantities()
   );
+  const [copies, setCopies] = useState(1);
   const [submitting, setSubmitting] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState("");
@@ -68,6 +75,10 @@ export default function OrderForm({ order = null }) {
     setQuantities((prev) => ({ ...prev, [flavor]: prev[flavor] - 1 }));
   }
 
+  function changeCopies(delta) {
+    setCopies((prev) => Math.min(MAX_COPIES_PER_SUBMIT, Math.max(1, prev + delta)));
+  }
+
   async function handleSubmit(e) {
     e.preventDefault();
     setError("");
@@ -84,10 +95,13 @@ export default function OrderForm({ order = null }) {
     try {
       const url = isEditing ? `/api/orders/${order.id}` : "/api/orders";
       const method = isEditing ? "PATCH" : "POST";
+      const payload = isEditing
+        ? { fecha, cliente, comida, sabores }
+        : { fecha, cliente, comida, sabores, copies };
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
-        body: JSON.stringify({ fecha, cliente, comida, sabores }),
+        body: JSON.stringify(payload),
       });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "No se pudo guardar el pedido.");
@@ -98,10 +112,11 @@ export default function OrderForm({ order = null }) {
         return;
       }
 
-      setSuccess("¡Pedido guardado!");
+      setSuccess(copies > 1 ? `¡${copies} pedidos guardados!` : "¡Pedido guardado!");
       setCliente("");
       setUnitCount(COMBO_SIZE[comida]);
       setQuantities(emptyQuantities());
+      setCopies(1);
       router.refresh();
     } catch (err) {
       setError(err.message);
@@ -255,6 +270,40 @@ export default function OrderForm({ order = null }) {
         </div>
       </div>
 
+      {!isEditing && (
+        <div>
+          <span className="text-sm font-medium text-slate-600">
+            Cantidad de pedidos iguales a guardar{" "}
+            <span className="font-normal text-slate-400">
+              (crea copias exactas por separado)
+            </span>
+          </span>
+          <div className="mt-1 flex items-center gap-3">
+            <button
+              type="button"
+              onClick={() => changeCopies(-1)}
+              disabled={copies <= 1}
+              aria-label="Quitar copia"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-slate-300 text-slate-600 transition-colors hover:bg-slate-100 disabled:opacity-30"
+            >
+              −
+            </button>
+            <span className="w-6 text-center text-lg font-bold text-slate-800">
+              {copies}
+            </span>
+            <button
+              type="button"
+              onClick={() => changeCopies(1)}
+              disabled={copies >= MAX_COPIES_PER_SUBMIT}
+              aria-label="Agregar copia"
+              className="flex h-8 w-8 items-center justify-center rounded-full border border-orange-400 text-orange-600 transition-colors hover:bg-orange-100 disabled:opacity-30"
+            >
+              +
+            </button>
+          </div>
+        </div>
+      )}
+
       {error && (
         <p className="rounded-lg bg-red-50 px-4 py-2 text-sm text-red-700">{error}</p>
       )}
@@ -282,7 +331,9 @@ export default function OrderForm({ order = null }) {
             ? "Guardando…"
             : isEditing
               ? "Guardar cambios"
-              : "Guardar pedido"}
+              : copies > 1
+                ? `Guardar ${copies} pedidos iguales`
+                : "Guardar pedido"}
         </button>
       </div>
     </form>

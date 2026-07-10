@@ -1,6 +1,6 @@
 import { NextResponse } from "next/server";
 import { getOrders, saveOrders } from "@/lib/orders-store";
-import { STATUSES } from "@/lib/constants";
+import { STATUSES, MAX_COPIES_PER_SUBMIT } from "@/lib/constants";
 import { validateOrderInput } from "@/lib/validate-order";
 
 // GET /api/orders            -> todos los pedidos
@@ -23,7 +23,7 @@ export async function GET(request) {
   return NextResponse.json({ orders: filtered });
 }
 
-// POST /api/orders -> crea un pedido nuevo
+// POST /api/orders -> crea uno o más pedidos idénticos (copias exactas)
 export async function POST(request) {
   let body;
   try {
@@ -37,19 +37,28 @@ export async function POST(request) {
     return NextResponse.json({ error }, { status: 400 });
   }
 
+  const copies = body?.copies === undefined ? 1 : Number(body.copies);
+  if (!Number.isInteger(copies) || copies < 1 || copies > MAX_COPIES_PER_SUBMIT) {
+    return NextResponse.json(
+      { error: `La cantidad de pedidos iguales debe ser entre 1 y ${MAX_COPIES_PER_SUBMIT}.` },
+      { status: 400 }
+    );
+  }
+
   try {
     const orders = await getOrders();
-    const newOrder = {
+    const baseTime = new Date();
+    const newOrders = Array.from({ length: copies }, (_, i) => ({
       id: crypto.randomUUID(),
       ...value,
       estatus: STATUSES[0],
-      createdAt: new Date().toISOString(),
-    };
+      createdAt: new Date(baseTime.getTime() + i).toISOString(),
+    }));
 
-    orders.push(newOrder);
+    orders.push(...newOrders);
     await saveOrders(orders);
 
-    return NextResponse.json({ order: newOrder }, { status: 201 });
+    return NextResponse.json({ orders: newOrders }, { status: 201 });
   } catch (err) {
     console.error(err);
     return NextResponse.json({ error: err.message }, { status: 500 });
