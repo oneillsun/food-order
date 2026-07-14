@@ -14,18 +14,22 @@ estatus de cada pedido (Pendiente, Pagado).
 
 ## Cómo se guardan los datos
 
-- **En tu computador (desarrollo):** si no configuras nada, los pedidos se
-  guardan en el archivo `data/orders.json` dentro del proyecto, tal como se
-  pidió originalmente.
+Cada pedido se guarda en su propio archivo, identificado por su id
+(`orders/<id>.json`), en vez de un único archivo compartido entre todos los
+pedidos. Así, crear un pedido nunca puede pisar el de otro pedido creado casi
+al mismo tiempo (dos pestañas abiertas, un reintento tras un timeout, etc.).
+
+- **En tu computador (desarrollo):** si no configuras nada, cada pedido se
+  guarda como un archivo JSON dentro de `data/orders/` en el proyecto.
 - **En Vercel (producción):** el sistema de archivos de Vercel es de solo
-  lectura para las funciones que atienden tus peticiones, así que un
-  `orders.json` local **no persistiría** ahí. Por eso, en producción la app
-  usa automáticamente **Vercel Blob** (plan gratis) para guardar ese mismo
-  `orders.json` de forma duradera. El cambio es transparente: mismo formato
-  de datos, solo cambia dónde vive el archivo.
+  lectura para las funciones que atienden tus peticiones, así que esos
+  archivos locales **no persistirían** ahí. Por eso, en producción la app usa
+  automáticamente **Vercel Blob** (plan gratis) para guardar cada pedido de
+  forma duradera, leyendo siempre la versión más reciente (sin caché de CDN)
+  para evitar datos desactualizados justo después de guardar.
 
 La app detecta sola cuál usar: si existe la variable de entorno
-`BLOB_READ_WRITE_TOKEN`, usa Blob; si no, usa el archivo local.
+`BLOB_READ_WRITE_TOKEN`, usa Blob; si no, usa los archivos locales.
 
 ## Desarrollo local
 
@@ -34,7 +38,7 @@ npm install
 npm run dev
 ```
 
-Abre http://localhost:3000. Los pedidos quedarán en `data/orders.json`
+Abre http://localhost:3000. Los pedidos quedarán en `data/orders/`
 (no se sube a git).
 
 ## Publicar en Vercel (gratis)
@@ -60,8 +64,8 @@ Esto trae la variable `BLOB_READ_WRITE_TOKEN` a tu entorno local.
 
 - `lib/constants.js` — catálogo de sabores, tipos de comida, tamaños de
   combo y estatus.
-- `lib/orders-store.js` — capa de datos (Blob en producción, JSON local en
-  desarrollo).
+- `lib/orders-store.js` — capa de datos, un archivo por pedido (Blob en
+  producción, JSON local en desarrollo).
 - `app/api/orders/route.js` — listar (`GET`, con filtro `?fecha=`) y crear
   (`POST`) pedidos.
 - `app/api/orders/[id]/route.js` — cambiar estatus (`PATCH`) y eliminar

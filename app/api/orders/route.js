@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrders, saveOrders } from "@/lib/orders-store";
+import { getOrders, putOrder } from "@/lib/orders-store";
 import { STATUSES, MAX_COPIES_PER_SUBMIT } from "@/lib/constants";
 import { validateOrderInput } from "@/lib/validate-order";
 
@@ -46,7 +46,6 @@ export async function POST(request) {
   }
 
   try {
-    const orders = await getOrders();
     const baseTime = new Date();
     const newOrders = Array.from({ length: copies }, (_, i) => ({
       id: crypto.randomUUID(),
@@ -55,8 +54,10 @@ export async function POST(request) {
       createdAt: new Date(baseTime.getTime() + i).toISOString(),
     }));
 
-    orders.push(...newOrders);
-    await saveOrders(orders);
+    // Cada pedido se guarda de forma independiente: no hace falta leer los
+    // pedidos existentes antes de crear uno nuevo, así que no hay riesgo de
+    // pisar otro pedido creado casi al mismo tiempo.
+    await Promise.all(newOrders.map((o) => putOrder(o)));
 
     return NextResponse.json({ orders: newOrders }, { status: 201 });
   } catch (err) {

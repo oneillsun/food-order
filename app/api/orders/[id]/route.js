@@ -1,5 +1,5 @@
 import { NextResponse } from "next/server";
-import { getOrders, saveOrders } from "@/lib/orders-store";
+import { getOrder, putOrder, deleteOrder } from "@/lib/orders-store";
 import { STATUSES } from "@/lib/constants";
 import { validateOrderInput } from "@/lib/validate-order";
 
@@ -8,8 +8,7 @@ export async function GET(_request, { params }) {
   const { id } = await params;
 
   try {
-    const orders = await getOrders();
-    const order = orders.find((o) => o.id === id);
+    const order = await getOrder(id);
     if (!order) {
       return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
     }
@@ -37,13 +36,12 @@ export async function PATCH(request, { params }) {
   }
 
   try {
-    const orders = await getOrders();
-    const idx = orders.findIndex((o) => o.id === id);
-    if (idx === -1) {
+    const current = await getOrder(id);
+    if (!current) {
       return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
     }
 
-    let updated = orders[idx];
+    let updated = current;
 
     const wantsContentEdit = CONTENT_FIELDS.some((k) => body?.[k] !== undefined);
     if (wantsContentEdit) {
@@ -70,8 +68,7 @@ export async function PATCH(request, { params }) {
       updated = { ...updated, estatus: body.estatus };
     }
 
-    orders[idx] = updated;
-    await saveOrders(orders);
+    await putOrder(updated);
     return NextResponse.json({ order: updated });
   } catch (err) {
     console.error(err);
@@ -84,13 +81,12 @@ export async function DELETE(_request, { params }) {
   const { id } = await params;
 
   try {
-    const orders = await getOrders();
-    const filtered = orders.filter((o) => o.id !== id);
-    if (filtered.length === orders.length) {
+    const current = await getOrder(id);
+    if (!current) {
       return NextResponse.json({ error: "Pedido no encontrado." }, { status: 404 });
     }
 
-    await saveOrders(filtered);
+    await deleteOrder(id);
     return NextResponse.json({ ok: true });
   } catch (err) {
     console.error(err);

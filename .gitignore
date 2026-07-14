@@ -38,7 +38,7 @@ yarn-error.log*
 .vercel
 
 # datos locales de pedidos (fallback cuando no hay Vercel Blob configurado)
-/data/*.json
+/data/
 
 # typescript
 *.tsbuildinfo
