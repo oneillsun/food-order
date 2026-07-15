@@ -18,6 +18,7 @@ const STATUS_STYLES = {
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [fecha, setFecha] = useState(todayISO());
+  const [statusFilter, setStatusFilter] = useState("Todos");
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
@@ -53,6 +54,14 @@ export default function Dashboard() {
         .filter((o) => o.fecha === fecha)
         .sort((a, b) => (b.createdAt || "").localeCompare(a.createdAt || "")),
     [orders, fecha]
+  );
+
+  const detailOrders = useMemo(
+    () =>
+      statusFilter === "Todos"
+        ? dayOrders
+        : dayOrders.filter((o) => o.estatus === statusFilter),
+    [dayOrders, statusFilter]
   );
 
   const summary = useMemo(() => {
@@ -147,7 +156,7 @@ export default function Dashboard() {
                   : "border-slate-200 text-slate-600 hover:bg-slate-100"
               }`}
             >
-              {d} · {count}
+              {d} ({count})
             </button>
           ))}
         </div>
@@ -163,7 +172,7 @@ export default function Dashboard() {
         <>
           <div className="space-y-2">
             <h2 className="text-xs font-semibold uppercase tracking-wide text-slate-500">
-              Cobro estimado
+              Venta $
             </h2>
             <div className="grid grid-cols-1">
               <SummaryCard
@@ -191,16 +200,14 @@ export default function Dashboard() {
             </h2>
             <div className="grid grid-cols-2 gap-3">
               <SummaryCard
-                label="Pendientes"
+                label={`Pendientes - $${summary.estatus.Pendiente * PRICE_PER_ORDER}`}
                 value={summary.estatus.Pendiente}
-                sub={`$${summary.estatus.Pendiente * PRICE_PER_ORDER}`}
                 tone="orange"
                 icon="⏳"
               />
               <SummaryCard
-                label="Pagados"
+                label={`Pagados - $${summary.estatus.Pagado * PRICE_PER_ORDER}`}
                 value={summary.estatus.Pagado}
-                sub={`$${summary.estatus.Pagado * PRICE_PER_ORDER}`}
                 tone="green"
                 icon="✅"
               />
@@ -246,31 +253,41 @@ export default function Dashboard() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="mb-3 font-semibold text-slate-700">Estatus</h2>
-              <ul className="space-y-1 text-sm">
-                {STATUSES.map((st) => (
-                  <li
-                    key={st}
-                    className="flex justify-between border-b border-slate-100 py-1 last:border-0"
-                  >
-                    <span>{st}</span>
-                    <span className="font-semibold">{summary.estatus[st]}</span>
-                  </li>
-                ))}
-              </ul>
+              <StatusDonutChart estatus={summary.estatus} />
             </div>
           </div>
 
           <div className="space-y-3">
-            <h2 className="font-semibold text-slate-700">
-              Detalle de pedidos ({dayOrders.length})
-            </h2>
-            {dayOrders.length === 0 ? (
+            <div className="flex flex-wrap items-center justify-between gap-3">
+              <h2 className="font-semibold text-slate-700">
+                Detalle de pedidos ({detailOrders.length})
+              </h2>
+              <div className="flex gap-2">
+                {["Todos", ...STATUSES].map((st) => (
+                  <button
+                    key={st}
+                    type="button"
+                    onClick={() => setStatusFilter(st)}
+                    className={`rounded-full border px-3 py-1 text-xs font-medium transition-colors ${
+                      st === statusFilter
+                        ? "border-orange-500 bg-orange-50 text-orange-700"
+                        : "border-slate-200 text-slate-600 hover:bg-slate-100"
+                    }`}
+                  >
+                    {st}
+                  </button>
+                ))}
+              </div>
+            </div>
+            {detailOrders.length === 0 ? (
               <p className="rounded-xl border border-dashed border-slate-300 p-6 text-center text-slate-500">
-                No hay pedidos para esta fecha.
+                {dayOrders.length === 0
+                  ? "No hay pedidos para esta fecha."
+                  : "No hay pedidos con este estatus para esta fecha."}
               </p>
             ) : (
               <div className="space-y-3">
-                {dayOrders.map((o) => (
+                {detailOrders.map((o) => (
                   <div
                     key={o.id}
                     className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
@@ -330,7 +347,7 @@ const CARD_TONE_STYLES = {
   green: "border-emerald-300 bg-emerald-50",
 };
 
-function SummaryCard({ label, value, tone = "neutral", icon, sub }) {
+function SummaryCard({ label, value, tone = "neutral", icon }) {
   return (
     <div className={`rounded-xl border p-4 ${CARD_TONE_STYLES[tone]}`}>
       <div className="flex items-center gap-1.5">
@@ -342,7 +359,104 @@ function SummaryCard({ label, value, tone = "neutral", icon, sub }) {
         {label && <p className="text-xs font-medium text-slate-500">{label}</p>}
       </div>
       <p className="text-2xl font-bold text-slate-800">{value}</p>
-      {sub && <p className="text-xs font-medium text-slate-500">{sub}</p>}
+    </div>
+  );
+}
+
+// Colores reservados de estatus, iguales a los usados en el resto del
+// dashboard (tarjetas y selector de estatus): ámbar para Pendiente, verde
+// para Pagado. Nunca se ciclan ni se reutilizan para otra cosa.
+const STATUS_CHART_COLORS = {
+  Pendiente: "#f59e0b",
+  Pagado: "#10b981",
+};
+
+function StatusDonutChart({ estatus }) {
+  const radius = 42;
+  const strokeWidth = 14;
+  const circumference = 2 * Math.PI * radius;
+  const total = STATUSES.reduce((sum, st) => sum + estatus[st], 0);
+
+  let offset = 0;
+  const arcs = STATUSES.map((st) => {
+    const count = estatus[st];
+    const fraction = total > 0 ? count / total : 0;
+    const length = fraction * circumference;
+    const arc = { st, count, fraction, length, offset };
+    offset += length;
+    return arc;
+  });
+
+  return (
+    <div className="flex flex-col items-center gap-4 sm:flex-row sm:justify-center">
+      <svg
+        width="120"
+        height="120"
+        viewBox="0 0 100 100"
+        role="img"
+        aria-label={`Distribución de pedidos por estatus: ${STATUSES.map(
+          (st) => `${st} ${estatus[st]}`
+        ).join(", ")}`}
+      >
+        <g transform="rotate(-90 50 50)">
+          <circle cx="50" cy="50" r={radius} fill="none" stroke="#e2e8f0" strokeWidth={strokeWidth} />
+          {arcs.map(
+            (a) =>
+              a.length > 0 && (
+                <circle
+                  key={a.st}
+                  cx="50"
+                  cy="50"
+                  r={radius}
+                  fill="none"
+                  stroke={STATUS_CHART_COLORS[a.st]}
+                  strokeWidth={strokeWidth}
+                  strokeDasharray={`${a.length} ${circumference - a.length}`}
+                  strokeDashoffset={-a.offset}
+                >
+                  <title>
+                    {a.st}: {a.count} ({Math.round(a.fraction * 100)}%)
+                  </title>
+                </circle>
+              )
+          )}
+        </g>
+        <text
+          x="50"
+          y="47"
+          textAnchor="middle"
+          className="fill-slate-800 font-bold"
+          style={{ fontSize: "20px" }}
+        >
+          {total}
+        </text>
+        <text x="50" y="61" textAnchor="middle" className="fill-slate-500" style={{ fontSize: "8px" }}>
+          pedidos
+        </text>
+      </svg>
+
+      <ul className="w-full max-w-[220px] space-y-2 text-sm">
+        {arcs.map((a) => (
+          <li key={a.st} className="flex items-center justify-between gap-3">
+            <span className="flex items-center gap-2 text-slate-700">
+              <span
+                className="h-3 w-3 shrink-0 rounded-full"
+                style={{ backgroundColor: STATUS_CHART_COLORS[a.st] }}
+                aria-hidden="true"
+              />
+              {a.st}s
+            </span>
+            <span className="text-right">
+              <span className="block font-semibold text-slate-800">
+                {a.count} ({total > 0 ? Math.round(a.fraction * 100) : 0}%)
+              </span>
+              <span className="block text-xs text-slate-500">
+                ${a.count * PRICE_PER_ORDER}
+              </span>
+            </span>
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }
