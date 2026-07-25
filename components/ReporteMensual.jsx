@@ -3,7 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { useSearchParams } from "next/navigation";
-import { FLAVORS, PRICE_PER_ORDER } from "@/lib/constants";
+import { FLAVORS, STATUSES, PRICE_PER_ORDER } from "@/lib/constants";
 
 function currentMonthISO() {
   const d = new Date();
@@ -60,9 +60,11 @@ export default function ReporteMensual() {
         Empanada: Object.fromEntries(FLAVORS.map((f) => [f, 0])),
         Arepa: Object.fromEntries(FLAVORS.map((f) => [f, 0])),
       },
+      estatus: Object.fromEntries(STATUSES.map((st) => [st, 0])),
     };
     for (const o of monthOrders) {
       s.pedidosPorComida[o.comida] = (s.pedidosPorComida[o.comida] || 0) + 1;
+      s.estatus[o.estatus] = (s.estatus[o.estatus] || 0) + 1;
       for (const sabor of o.sabores) {
         s.saboresPorComida[o.comida][sabor] = (s.saboresPorComida[o.comida][sabor] || 0) + 1;
       }
@@ -99,6 +101,21 @@ export default function ReporteMensual() {
             </h2>
             <div className="grid grid-cols-1">
               <SummaryCard value={`$${summary.totalEstimado}`} tone="green" icon="💵" />
+            </div>
+            <div className="rounded-xl border border-slate-200 bg-white p-4">
+              <ul className="space-y-1 text-sm">
+                {STATUSES.map((st) => (
+                  <li
+                    key={st}
+                    className="flex justify-between border-b border-slate-100 py-1 last:border-0"
+                  >
+                    <span>{st}s</span>
+                    <span className="font-semibold">
+                      {summary.estatus[st]} (${summary.estatus[st] * PRICE_PER_ORDER})
+                    </span>
+                  </li>
+                ))}
+              </ul>
             </div>
           </div>
 
