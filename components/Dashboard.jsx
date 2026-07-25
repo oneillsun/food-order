@@ -132,15 +132,23 @@ export default function Dashboard() {
             Consulta el total y el detalle de los pedidos por día.
           </p>
         </div>
-        <label className="flex flex-col text-sm font-medium text-slate-600">
-          Fecha
-          <input
-            type="date"
-            value={fecha}
-            onChange={(e) => setFecha(e.target.value)}
-            className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
-          />
-        </label>
+        <div className="flex flex-wrap items-end gap-4">
+          <label className="flex flex-col text-sm font-medium text-slate-600">
+            Fecha
+            <input
+              type="date"
+              value={fecha}
+              onChange={(e) => setFecha(e.target.value)}
+              className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
+            />
+          </label>
+          <Link
+            href={`/reportes/mensual?mes=${fecha.slice(0, 7)}`}
+            className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100"
+          >
+            Reporte mensual
+          </Link>
+        </div>
       </div>
 
       {dateCounts.length > 0 && (
@@ -217,7 +225,7 @@ export default function Dashboard() {
           <div className="grid gap-4 md:grid-cols-3">
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="mb-3 font-semibold text-slate-700">
-                Sabores · Empanadas ({summary.unidadesPorComida.Empanada})
+                Total · Empanadas ({summary.unidadesPorComida.Empanada})
               </h2>
               <ul className="space-y-1 text-sm">
                 {FLAVORS.map((f) => (
@@ -235,7 +243,7 @@ export default function Dashboard() {
             </div>
             <div className="rounded-xl border border-slate-200 bg-white p-4">
               <h2 className="mb-3 font-semibold text-slate-700">
-                Sabores · Arepas ({summary.unidadesPorComida.Arepa})
+                Total · Arepas ({summary.unidadesPorComida.Arepa})
               </h2>
               <ul className="space-y-1 text-sm">
                 {FLAVORS.map((f) => (
