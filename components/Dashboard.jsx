@@ -3,6 +3,7 @@
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
 import { FLAVORS, STATUSES, PRICE_PER_ORDER } from "@/lib/constants";
+import { takePendingOrderUpdate } from "@/lib/order-update-bus";
 
 function todayISO() {
   const d = new Date();
@@ -30,7 +31,22 @@ export default function Dashboard() {
       const res = await fetch("/api/orders", { cache: "no-store" });
       const data = await res.json();
       if (!res.ok) throw new Error(data.error || "Error cargando los pedidos.");
-      setOrders(data.orders);
+
+      // Vercel Blob puede tardar en propagar la sobreescritura de un pedido
+      // editado, así que este fetch a veces devuelve todavía la versión
+      // vieja. Si venimos de editar un pedido, aplicamos encima la versión
+      // que ya sabemos correcta (la que devolvió el PATCH) en vez de
+      // esperar a que Blob se ponga al día.
+      let orders = data.orders;
+      const pending = takePendingOrderUpdate();
+      if (pending) {
+        const idx = orders.findIndex((o) => o.id === pending.id);
+        orders =
+          idx === -1
+            ? [pending, ...orders]
+            : orders.map((o) => (o.id === pending.id ? pending : o));
+      }
+      setOrders(orders);
     } catch (err) {
       setError(err.message);
     } finally {

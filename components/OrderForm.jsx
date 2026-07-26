@@ -10,6 +10,7 @@ import {
   MAX_COPIES_PER_SUBMIT,
   FOOD_TYPES,
 } from "@/lib/constants";
+import { setPendingOrderUpdate } from "@/lib/order-update-bus";
 
 function todayISO() {
   const d = new Date();
@@ -112,6 +113,7 @@ export default function OrderForm({ order = null }) {
       if (!res.ok) throw new Error(data.error || "No se pudo guardar el pedido.");
 
       if (isEditing) {
+        setPendingOrderUpdate(data.order);
         router.push("/");
         router.refresh();
         return;
