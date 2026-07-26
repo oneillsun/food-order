@@ -42,6 +42,11 @@ export default function Dashboard() {
     loadAll();
   }, []);
 
+  useEffect(() => {
+    window.addEventListener("refresh-orders", loadAll);
+    return () => window.removeEventListener("refresh-orders", loadAll);
+  }, []);
+
   const dateCounts = useMemo(() => {
     const map = new Map();
     for (const o of orders) map.set(o.fecha, (map.get(o.fecha) || 0) + 1);
