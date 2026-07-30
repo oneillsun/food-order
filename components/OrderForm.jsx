@@ -14,8 +14,9 @@ import {
 } from "@/lib/constants";
 import { setPendingOrderUpdate } from "@/lib/order-update-bus";
 
-function todayISO() {
+function tomorrowISO() {
   const d = new Date();
+  d.setDate(d.getDate() + 1);
   const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 10);
 }
@@ -52,7 +53,7 @@ export default function OrderForm({ order = null }) {
   const router = useRouter();
   const isEditing = Boolean(order);
 
-  const [fecha, setFecha] = useState(order?.fecha ?? todayISO());
+  const [fecha, setFecha] = useState(order?.fecha ?? tomorrowISO());
   const [cliente, setCliente] = useState(order?.cliente ?? "");
   const [telefono, setTelefono] = useState(formatPhone(order?.telefono ?? ""));
   const [comida, setComida] = useState(order?.comida ?? "Empanada");
