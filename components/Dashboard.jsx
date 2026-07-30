@@ -16,6 +16,14 @@ const STATUS_STYLES = {
   Pagado: "border-emerald-300 bg-emerald-100 text-emerald-800",
 };
 
+// Link de WhatsApp a partir de un teléfono de EE.UU.; null si no hay teléfono
+// (pedidos creados antes de agregar este campo).
+function whatsappLink(telefono) {
+  const digits = (telefono || "").replace(/\D/g, "");
+  if (!digits) return null;
+  return `https://wa.me/1${digits}`;
+}
+
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [fecha, setFecha] = useState(todayISO());
@@ -316,7 +324,9 @@ export default function Dashboard() {
               </p>
             ) : (
               <div className="space-y-3">
-                {detailOrders.map((o) => (
+                {detailOrders.map((o) => {
+                  const wa = whatsappLink(o.telefono);
+                  return (
                   <div
                     key={o.id}
                     className="rounded-xl border border-slate-200 bg-white p-4 shadow-sm"
@@ -329,6 +339,21 @@ export default function Dashboard() {
                         </p>
                       </div>
                       <div className="flex items-center gap-2">
+                        {wa && (
+                          <a
+                            href={wa}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Escribir a ${o.cliente} por WhatsApp`}
+                            title="Escribir por WhatsApp"
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-emerald-300 bg-emerald-50 text-emerald-700 hover:bg-emerald-100"
+                          >
+                            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+                              <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
+                              <path d="M12.001 2C6.478 2 2 6.477 2 12c0 1.986.577 3.838 1.573 5.396L2 22l4.735-1.541A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12.001 2zm0 18.083a8.06 8.06 0 01-4.109-1.126l-.295-.175-3.055.995.998-3.008-.192-.309A8.05 8.05 0 013.918 12c0-4.462 3.62-8.083 8.083-8.083 4.462 0 8.083 3.62 8.083 8.083 0 4.462-3.62 8.083-8.083 8.083z" />
+                            </svg>
+                          </a>
+                        )}
                         <select
                           value={o.estatus}
                           disabled={busyId === o.id}
@@ -360,7 +385,8 @@ export default function Dashboard() {
                       </div>
                     </div>
                   </div>
-                ))}
+                  );
+                })}
               </div>
             )}
           </div>

@@ -9,6 +9,7 @@ import {
   MAX_UNITS_PER_ORDER,
   MAX_COPIES_PER_SUBMIT,
   FOOD_TYPES,
+  SOURCES,
 } from "@/lib/constants";
 import { setPendingOrderUpdate } from "@/lib/order-update-bus";
 
@@ -35,6 +36,14 @@ function toTitleCase(str) {
   return str.toLowerCase().replace(/(^|\s)\p{L}/gu, (c) => c.toUpperCase());
 }
 
+// Formatea a medida que se escribe, en formato de EE.UU.: (555) 123-4567.
+function formatPhone(raw) {
+  const digits = raw.replace(/\D/g, "").slice(0, 10);
+  if (digits.length < 4) return digits.length ? `(${digits}` : "";
+  if (digits.length < 7) return `(${digits.slice(0, 3)}) ${digits.slice(3)}`;
+  return `(${digits.slice(0, 3)}) ${digits.slice(3, 6)}-${digits.slice(6)}`;
+}
+
 // Sin `order`, el formulario crea un pedido nuevo (POST). Con `order`, edita
 // ese pedido existente (PATCH) — solo se debe montar así mientras esté
 // en estatus Pendiente, esa regla la aplica la pantalla que lo invoca.
@@ -44,7 +53,9 @@ export default function OrderForm({ order = null }) {
 
   const [fecha, setFecha] = useState(order?.fecha ?? todayISO());
   const [cliente, setCliente] = useState(order?.cliente ?? "");
+  const [telefono, setTelefono] = useState(formatPhone(order?.telefono ?? ""));
   const [comida, setComida] = useState(order?.comida ?? "Empanada");
+  const [fuente, setFuente] = useState(order?.fuente ?? SOURCES[0]);
   const [unitCount, setUnitCount] = useState(order?.sabores.length ?? COMBO_SIZE.Empanada);
   const [quantities, setQuantities] = useState(
     order ? quantitiesFromSabores(order.sabores) : emptyQuantities()
@@ -102,8 +113,8 @@ export default function OrderForm({ order = null }) {
       const url = isEditing ? `/api/orders/${order.id}` : "/api/orders";
       const method = isEditing ? "PATCH" : "POST";
       const payload = isEditing
-        ? { fecha, cliente, comida, sabores }
-        : { fecha, cliente, comida, sabores, copies };
+        ? { fecha, cliente, telefono, comida, sabores, fuente }
+        : { fecha, cliente, telefono, comida, sabores, fuente, copies };
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -121,8 +132,10 @@ export default function OrderForm({ order = null }) {
 
       setSuccess(copies > 1 ? `¡${copies} pedidos guardados!` : "¡Pedido guardado!");
       setCliente("");
+      setTelefono("");
       setUnitCount(COMBO_SIZE[comida]);
       setQuantities(emptyQuantities());
+      setFuente(SOURCES[0]);
       setCopies(1);
       router.refresh();
     } catch (err) {
@@ -161,6 +174,21 @@ export default function OrderForm({ order = null }) {
             className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
           />
         </label>
+        <label className="flex flex-col text-sm font-medium text-slate-600">
+          Teléfono
+          <input
+            type="tel"
+            required
+            inputMode="tel"
+            value={telefono}
+            onChange={(e) => setTelefono(formatPhone(e.target.value))}
+            placeholder="(555) 123-4567"
+            pattern="\(\d{3}\) \d{3}-\d{4}"
+            title="Formato de EE.UU.: (555) 123-4567"
+            maxLength={14}
+            className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
+          />
+        </label>
       </div>
 
       <div>
@@ -184,6 +212,32 @@ export default function OrderForm({ order = null }) {
                 className="sr-only"
               />
               {f} ({COMBO_SIZE[f]} en el combo)
+            </label>
+          ))}
+        </div>
+      </div>
+
+      <div>
+        <span className="text-sm font-medium text-slate-600">Fuente</span>
+        <div className="mt-1 flex gap-3">
+          {SOURCES.map((s) => (
+            <label
+              key={s}
+              className={`flex-1 cursor-pointer rounded-lg border px-3 py-2 text-center text-sm font-medium transition-colors ${
+                fuente === s
+                  ? "border-orange-500 bg-orange-50 text-orange-700"
+                  : "border-slate-300 text-slate-600 hover:bg-slate-50"
+              }`}
+            >
+              <input
+                type="radio"
+                name="fuente"
+                value={s}
+                checked={fuente === s}
+                onChange={() => setFuente(s)}
+                className="sr-only"
+              />
+              {s}
             </label>
           ))}
         </div>
