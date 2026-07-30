@@ -180,10 +180,9 @@ export default function OrderForm({ order = null }) {
           />
         </label>
         <label className="flex flex-col text-sm font-medium text-slate-600">
-          Teléfono
+          Teléfono <span className="font-normal text-slate-400">(opcional)</span>
           <input
             type="tel"
-            required
             inputMode="tel"
             value={telefono}
             onChange={(e) => setTelefono(formatPhone(e.target.value))}
