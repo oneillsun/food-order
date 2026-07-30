@@ -24,6 +24,13 @@ function whatsappLink(telefono) {
   return `https://wa.me/1${digits}`;
 }
 
+// Link a Google Maps a partir de la dirección de entrega; null si no hay
+// dirección. Abre la app de navegación instalada en dispositivos móviles.
+function mapLink(direccion) {
+  if (!direccion) return null;
+  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+}
+
 export default function Dashboard() {
   const [orders, setOrders] = useState([]);
   const [fecha, setFecha] = useState(todayISO());
@@ -326,6 +333,7 @@ export default function Dashboard() {
               <div className="space-y-3">
                 {detailOrders.map((o) => {
                   const wa = whatsappLink(o.telefono);
+                  const maps = mapLink(o.direccion);
                   return (
                   <div
                     key={o.id}
@@ -337,6 +345,21 @@ export default function Dashboard() {
                         <p className="text-sm text-slate-500">
                           {o.comida} · {o.sabores.join(", ")}
                         </p>
+                        {(o.direccion || o.horaEntrega) && (
+                          <div className="mt-1 flex flex-wrap items-center gap-2">
+                            {o.horaEntrega && (
+                              <span className="inline-flex items-center gap-1 rounded-full border border-orange-200 bg-orange-50 px-2 py-0.5 text-xs font-medium text-orange-700">
+                                <svg viewBox="0 0 24 24" className="h-3 w-3 fill-current">
+                                  <path d="M12 2a10 10 0 100 20 10 10 0 000-20zm1 10.586V6h-2v7a1 1 0 00.293.707l3 3 1.414-1.414-2.707-2.707z" />
+                                </svg>
+                                {o.horaEntrega}
+                              </span>
+                            )}
+                            {o.direccion && (
+                              <span className="text-xs text-slate-400">{o.direccion}</span>
+                            )}
+                          </div>
+                        )}
                       </div>
                       <div className="flex items-center gap-2">
                         {wa && (
@@ -351,6 +374,20 @@ export default function Dashboard() {
                             <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
                               <path d="M17.472 14.382c-.297-.149-1.758-.867-2.03-.967-.273-.099-.471-.148-.67.15-.197.297-.767.966-.94 1.164-.173.199-.347.223-.644.075-.297-.15-1.255-.463-2.39-1.475-.883-.788-1.48-1.761-1.653-2.059-.173-.297-.018-.458.13-.606.134-.133.298-.347.446-.52.149-.174.198-.298.298-.497.099-.198.05-.372-.025-.521-.075-.149-.669-1.612-.916-2.207-.242-.579-.487-.5-.669-.51-.173-.008-.371-.01-.57-.01-.198 0-.52.074-.792.372-.272.297-1.04 1.016-1.04 2.479 0 1.462 1.065 2.875 1.213 3.074.149.198 2.096 3.2 5.077 4.487.709.306 1.262.489 1.694.626.712.226 1.36.194 1.872.118.571-.085 1.758-.719 2.006-1.413.248-.694.248-1.289.173-1.413-.074-.124-.272-.198-.57-.347z" />
                               <path d="M12.001 2C6.478 2 2 6.477 2 12c0 1.986.577 3.838 1.573 5.396L2 22l4.735-1.541A9.953 9.953 0 0012 22c5.523 0 10-4.477 10-10S17.523 2 12.001 2zm0 18.083a8.06 8.06 0 01-4.109-1.126l-.295-.175-3.055.995.998-3.008-.192-.309A8.05 8.05 0 013.918 12c0-4.462 3.62-8.083 8.083-8.083 4.462 0 8.083 3.62 8.083 8.083 0 4.462-3.62 8.083-8.083 8.083z" />
+                            </svg>
+                          </a>
+                        )}
+                        {maps && (
+                          <a
+                            href={maps}
+                            target="_blank"
+                            rel="noopener noreferrer"
+                            aria-label={`Abrir dirección de ${o.cliente} en el mapa`}
+                            title="Abrir en el mapa"
+                            className="flex h-7 w-7 items-center justify-center rounded-full border border-sky-300 bg-sky-50 text-sky-700 hover:bg-sky-100"
+                          >
+                            <svg viewBox="0 0 24 24" className="h-4 w-4 fill-current">
+                              <path d="M12 2C7.589 2 4 5.589 4 9.995 4 16.44 11.16 21.54 11.464 21.754a.998.998 0 001.072 0C12.84 21.54 20 16.44 20 9.995 20 5.589 16.411 2 12 2zm0 10.5A2.5 2.5 0 1112 7.5a2.5 2.5 0 010 5z" />
                             </svg>
                           </a>
                         )}

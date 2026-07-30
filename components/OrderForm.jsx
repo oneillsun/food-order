@@ -10,6 +10,7 @@ import {
   MAX_COPIES_PER_SUBMIT,
   FOOD_TYPES,
   SOURCES,
+  DELIVERY_TIMES,
 } from "@/lib/constants";
 import { setPendingOrderUpdate } from "@/lib/order-update-bus";
 
@@ -56,6 +57,8 @@ export default function OrderForm({ order = null }) {
   const [telefono, setTelefono] = useState(formatPhone(order?.telefono ?? ""));
   const [comida, setComida] = useState(order?.comida ?? "Empanada");
   const [fuente, setFuente] = useState(order?.fuente ?? SOURCES[0]);
+  const [direccion, setDireccion] = useState(order?.direccion ?? "");
+  const [horaEntrega, setHoraEntrega] = useState(order?.horaEntrega ?? "");
   const [unitCount, setUnitCount] = useState(order?.sabores.length ?? COMBO_SIZE.Empanada);
   const [quantities, setQuantities] = useState(
     order ? quantitiesFromSabores(order.sabores) : emptyQuantities()
@@ -113,8 +116,8 @@ export default function OrderForm({ order = null }) {
       const url = isEditing ? `/api/orders/${order.id}` : "/api/orders";
       const method = isEditing ? "PATCH" : "POST";
       const payload = isEditing
-        ? { fecha, cliente, telefono, comida, sabores, fuente }
-        : { fecha, cliente, telefono, comida, sabores, fuente, copies };
+        ? { fecha, cliente, telefono, comida, sabores, fuente, direccion, horaEntrega }
+        : { fecha, cliente, telefono, comida, sabores, fuente, direccion, horaEntrega, copies };
       const res = await fetch(url, {
         method,
         headers: { "Content-Type": "application/json" },
@@ -136,6 +139,8 @@ export default function OrderForm({ order = null }) {
       setUnitCount(COMBO_SIZE[comida]);
       setQuantities(emptyQuantities());
       setFuente(SOURCES[0]);
+      setDireccion("");
+      setHoraEntrega("");
       setCopies(1);
       router.refresh();
     } catch (err) {
@@ -241,6 +246,36 @@ export default function OrderForm({ order = null }) {
             </label>
           ))}
         </div>
+      </div>
+
+      <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
+        <label className="flex flex-col text-sm font-medium text-slate-600">
+          Dirección de entrega{" "}
+          <span className="font-normal text-slate-400">(opcional)</span>
+          <input
+            type="text"
+            value={direccion}
+            onChange={(e) => setDireccion(e.target.value)}
+            placeholder="Calle, número, ciudad…"
+            className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
+          />
+        </label>
+        <label className="flex flex-col text-sm font-medium text-slate-600">
+          Hora de entrega{" "}
+          <span className="font-normal text-slate-400">(opcional)</span>
+          <select
+            value={horaEntrega}
+            onChange={(e) => setHoraEntrega(e.target.value)}
+            className="mt-1 rounded-lg border border-slate-300 px-3 py-2"
+          >
+            <option value="">Sin especificar</option>
+            {DELIVERY_TIMES.map((t) => (
+              <option key={t} value={t}>
+                {t}
+              </option>
+            ))}
+          </select>
+        </label>
       </div>
 
       <div>

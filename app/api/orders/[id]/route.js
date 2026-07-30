@@ -19,7 +19,16 @@ export async function GET(_request, { params }) {
   }
 }
 
-const CONTENT_FIELDS = ["fecha", "cliente", "telefono", "comida", "sabores", "fuente"];
+const CONTENT_FIELDS = [
+  "fecha",
+  "cliente",
+  "telefono",
+  "comida",
+  "sabores",
+  "fuente",
+  "direccion",
+  "horaEntrega",
+];
 
 // PATCH /api/orders/:id
 // - { estatus } -> cambia el estatus, en cualquier momento.
