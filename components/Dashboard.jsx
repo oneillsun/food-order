@@ -80,7 +80,12 @@ export default function Dashboard() {
 
   const dateCounts = useMemo(() => {
     const map = new Map();
-    for (const o of orders) map.set(o.fecha, (map.get(o.fecha) || 0) + 1);
+    for (const o of orders) {
+      const entry = map.get(o.fecha) || { count: 0, hasPendiente: false };
+      entry.count += 1;
+      if (o.estatus === "Pendiente") entry.hasPendiente = true;
+      map.set(o.fecha, entry);
+    }
     return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14);
   }, [orders]);
 
@@ -189,7 +194,7 @@ export default function Dashboard() {
 
       {dateCounts.length > 0 && (
         <div className="flex flex-wrap gap-2">
-          {dateCounts.map(([d, count]) => (
+          {dateCounts.map(([d, { count, hasPendiente }]) => (
             <button
               key={d}
               type="button"
@@ -200,6 +205,11 @@ export default function Dashboard() {
                   : "border-slate-200 text-slate-600 hover:bg-slate-100"
               }`}
             >
+              {hasPendiente && (
+                <span aria-label="Tiene pedidos pendientes" title="Tiene pedidos pendientes">
+                  ⚠️{" "}
+                </span>
+              )}
               {d} ({count})
             </button>
           ))}
