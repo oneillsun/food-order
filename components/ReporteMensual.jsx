@@ -2,13 +2,19 @@
 
 import { useEffect, useMemo, useState } from "react";
 import Link from "next/link";
-import { useSearchParams } from "next/navigation";
+import { useRouter, useSearchParams } from "next/navigation";
 import { FLAVORS, STATUSES, PRICE_PER_ORDER } from "@/lib/constants";
 
 function currentMonthISO() {
   const d = new Date();
   const local = new Date(d.getTime() - d.getTimezoneOffset() * 60000);
   return local.toISOString().slice(0, 7);
+}
+
+function shiftMonth(mes, delta) {
+  const [year, month] = mes.split("-").map(Number);
+  const d = new Date(year, month - 1 + delta, 1);
+  return `${d.getFullYear()}-${String(d.getMonth() + 1).padStart(2, "0")}`;
 }
 
 function formatMonthLabel(mes) {
@@ -21,8 +27,13 @@ function formatMonthLabel(mes) {
 }
 
 export default function ReporteMensual() {
+  const router = useRouter();
   const searchParams = useSearchParams();
   const mes = searchParams.get("mes") || currentMonthISO();
+
+  function goToMonth(newMes) {
+    router.push(`/reportes/mensual?mes=${newMes}`);
+  }
 
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
@@ -78,13 +89,45 @@ export default function ReporteMensual() {
         <div>
           <h1 className="text-2xl font-bold">Reporte mensual</h1>
           <p className="text-sm text-slate-500">{formatMonthLabel(mes)}</p>
+          <div className="mt-2 flex items-center gap-2">
+            <button
+              type="button"
+              onClick={() => goToMonth(shiftMonth(mes, -1))}
+              aria-label="Mes anterior"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100"
+            >
+              ‹
+            </button>
+            <input
+              type="month"
+              value={mes}
+              onChange={(e) => e.target.value && goToMonth(e.target.value)}
+              className="rounded-lg border border-slate-300 px-3 py-2 text-sm"
+            />
+            <button
+              type="button"
+              onClick={() => goToMonth(shiftMonth(mes, 1))}
+              aria-label="Mes siguiente"
+              className="flex h-9 w-9 items-center justify-center rounded-lg border border-slate-300 text-slate-600 hover:bg-slate-100"
+            >
+              ›
+            </button>
+          </div>
         </div>
-        <Link
-          href="/"
-          className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
-        >
-          Volver al dashboard
-        </Link>
+        <div className="flex flex-wrap items-end gap-2">
+          <Link
+            href="/reportes/historico"
+            className="rounded-lg border border-orange-300 bg-orange-50 px-3 py-2 text-sm font-medium text-orange-700 hover:bg-orange-100"
+          >
+            Resumen histórico
+          </Link>
+          <Link
+            href="/"
+            className="rounded-lg border border-slate-300 px-3 py-2 text-sm font-medium text-slate-600 hover:bg-slate-100"
+          >
+            Volver al dashboard
+          </Link>
+        </div>
       </div>
 
       {error && (
