@@ -8,6 +8,7 @@ export default function PedidosPendientes() {
   const [orders, setOrders] = useState([]);
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
+  const [busyKey, setBusyKey] = useState(null);
 
   useEffect(() => {
     async function load() {
@@ -32,14 +33,41 @@ export default function PedidosPendientes() {
     for (const o of orders) {
       if (o.estatus !== "Pendiente") continue;
       const key = `${o.fecha}|${o.cliente}`;
-      const entry = map.get(key) || { fecha: o.fecha, cliente: o.cliente, cantidad: 0 };
+      const entry = map.get(key) || { fecha: o.fecha, cliente: o.cliente, cantidad: 0, ids: [] };
       entry.cantidad += 1;
+      entry.ids.push(o.id);
       map.set(key, entry);
     }
     return [...map.values()]
       .map((r) => ({ ...r, monto: r.cantidad * PRICE_PER_ORDER }))
       .sort((a, b) => a.fecha.localeCompare(b.fecha) || a.cliente.localeCompare(b.cliente));
   }, [orders]);
+
+  async function markPaid(key, ids) {
+    setBusyKey(key);
+    setError("");
+    try {
+      const results = await Promise.all(
+        ids.map((id) =>
+          fetch(`/api/orders/${id}`, {
+            method: "PATCH",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify({ estatus: "Pagado" }),
+          })
+        )
+      );
+      if (results.some((res) => !res.ok)) {
+        throw new Error("No se pudo actualizar el estatus de algunos pedidos.");
+      }
+      setOrders((prev) =>
+        prev.map((o) => (ids.includes(o.id) ? { ...o, estatus: "Pagado" } : o))
+      );
+    } catch (err) {
+      setError(err.message);
+    } finally {
+      setBusyKey(null);
+    }
+  }
 
   const totales = useMemo(
     () => ({
@@ -85,20 +113,31 @@ export default function PedidosPendientes() {
                 <th className="px-4 py-3">Cliente</th>
                 <th className="px-4 py-3 text-right">Cantidad Pedidos</th>
                 <th className="px-4 py-3 text-right">Monto</th>
+                <th className="px-4 py-3"></th>
               </tr>
             </thead>
             <tbody>
-              {rows.map((r) => (
-                <tr
-                  key={`${r.fecha}|${r.cliente}`}
-                  className="border-b border-slate-100 last:border-0"
-                >
-                  <td className="px-4 py-3">{r.fecha}</td>
-                  <td className="px-4 py-3">{r.cliente}</td>
-                  <td className="px-4 py-3 text-right">{r.cantidad}</td>
-                  <td className="px-4 py-3 text-right">${r.monto}</td>
-                </tr>
-              ))}
+              {rows.map((r) => {
+                const key = `${r.fecha}|${r.cliente}`;
+                return (
+                  <tr key={key} className="border-b border-slate-100 last:border-0">
+                    <td className="px-4 py-3">{r.fecha}</td>
+                    <td className="px-4 py-3">{r.cliente}</td>
+                    <td className="px-4 py-3 text-right">{r.cantidad}</td>
+                    <td className="px-4 py-3 text-right">${r.monto}</td>
+                    <td className="px-4 py-3 text-right">
+                      <button
+                        type="button"
+                        onClick={() => markPaid(key, r.ids)}
+                        disabled={busyKey === key}
+                        className="rounded-lg border border-emerald-300 bg-emerald-50 px-2 py-1 text-xs font-medium text-emerald-700 hover:bg-emerald-100 disabled:opacity-50"
+                      >
+                        Marcar como Pagado
+                      </button>
+                    </td>
+                  </tr>
+                );
+              })}
             </tbody>
             <tfoot>
               <tr className="border-t border-slate-200 bg-slate-50 font-semibold">
@@ -107,6 +146,7 @@ export default function PedidosPendientes() {
                 </td>
                 <td className="px-4 py-3 text-right">{totales.cantidad}</td>
                 <td className="px-4 py-3 text-right">${totales.monto}</td>
+                <td className="px-4 py-3"></td>
               </tr>
             </tfoot>
           </table>
