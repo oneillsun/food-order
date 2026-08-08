@@ -38,6 +38,7 @@ export default function Dashboard() {
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
+  const [showAllDates, setShowAllDates] = useState(false);
 
   async function loadAll() {
     setLoading(true);
@@ -86,8 +87,10 @@ export default function Dashboard() {
       if (o.estatus === "Pendiente") entry.hasPendiente = true;
       map.set(o.fecha, entry);
     }
-    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0])).slice(0, 14);
+    return [...map.entries()].sort((a, b) => b[0].localeCompare(a[0]));
   }, [orders]);
+
+  const visibleDateCounts = showAllDates ? dateCounts : dateCounts.slice(0, 10);
 
   const dayOrders = useMemo(
     () =>
@@ -199,8 +202,8 @@ export default function Dashboard() {
       </div>
 
       {dateCounts.length > 0 && (
-        <div className="flex flex-wrap gap-2">
-          {dateCounts.map(([d, { count, hasPendiente }]) => (
+        <div className="flex flex-wrap items-center gap-2">
+          {visibleDateCounts.map(([d, { count, hasPendiente }]) => (
             <button
               key={d}
               type="button"
@@ -219,6 +222,15 @@ export default function Dashboard() {
               {d} ({count})
             </button>
           ))}
+          {dateCounts.length > 10 && (
+            <button
+              type="button"
+              onClick={() => setShowAllDates((v) => !v)}
+              className="rounded-full border border-slate-200 px-3 py-1 text-xs font-medium text-slate-500 hover:bg-slate-100"
+            >
+              {showAllDates ? "Ver menos" : "Ver más…"}
+            </button>
+          )}
         </div>
       )}
 
