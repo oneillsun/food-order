@@ -24,11 +24,11 @@ function whatsappLink(telefono) {
   return `https://wa.me/1${digits}`;
 }
 
-// Link a Google Maps a partir de la dirección de entrega; null si no hay
+// Link a Apple Maps a partir de la dirección de entrega; null si no hay
 // dirección. Abre la app de navegación instalada en dispositivos móviles.
 function mapLink(direccion) {
   if (!direccion) return null;
-  return `https://www.google.com/maps/search/?api=1&query=${encodeURIComponent(direccion)}`;
+  return `https://maps.apple.com/?q=${encodeURIComponent(direccion)}`;
 }
 
 export default function Dashboard() {
