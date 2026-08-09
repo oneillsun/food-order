@@ -1,6 +1,6 @@
 "use client";
 
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useMemo, useRef, useState } from "react";
 import Link from "next/link";
 import { FLAVORS, STATUSES, PRICE_PER_ORDER } from "@/lib/constants";
 import { takePendingOrderUpdate } from "@/lib/order-update-bus";
@@ -39,6 +39,8 @@ export default function Dashboard() {
   const [error, setError] = useState("");
   const [busyId, setBusyId] = useState(null);
   const [showAllDates, setShowAllDates] = useState(false);
+  const [deliveryCosts, setDeliveryCosts] = useState({});
+  const requestedAddresses = useRef(new Set());
 
   async function loadAll() {
     setLoading(true);
@@ -107,6 +109,37 @@ export default function Dashboard() {
         : dayOrders.filter((o) => o.estatus === statusFilter),
     [dayOrders, statusFilter]
   );
+
+  useEffect(() => {
+    const addresses = [...new Set(detailOrders.map((o) => o.direccion).filter(Boolean))];
+    const pending = addresses.filter((a) => !requestedAddresses.current.has(a));
+    if (pending.length === 0) return;
+    pending.forEach((a) => requestedAddresses.current.add(a));
+
+    let cancelled = false;
+    (async () => {
+      for (const direccion of pending) {
+        setDeliveryCosts((prev) => ({ ...prev, [direccion]: { status: "loading" } }));
+        try {
+          const res = await fetch(`/api/delivery-cost?direccion=${encodeURIComponent(direccion)}`);
+          const data = await res.json();
+          if (cancelled) return;
+          setDeliveryCosts((prev) => ({
+            ...prev,
+            [direccion]: res.ok ? { status: "done", ...data } : { status: "error" },
+          }));
+        } catch {
+          if (!cancelled) {
+            setDeliveryCosts((prev) => ({ ...prev, [direccion]: { status: "error" } }));
+          }
+        }
+      }
+    })();
+
+    return () => {
+      cancelled = true;
+    };
+  }, [detailOrders]);
 
   const summary = useMemo(() => {
     const s = {
@@ -362,6 +395,7 @@ export default function Dashboard() {
                 {detailOrders.map((o) => {
                   const wa = whatsappLink(o.telefono);
                   const maps = mapLink(o.direccion);
+                  const delivery = o.direccion ? deliveryCosts[o.direccion] : null;
                   return (
                   <div
                     key={o.id}
@@ -385,6 +419,32 @@ export default function Dashboard() {
                             )}
                             {o.direccion && (
                               <span className="text-xs text-slate-400">{o.direccion}</span>
+                            )}
+                            {o.direccion && delivery?.status === "loading" && (
+                              <span className="text-xs text-slate-400">
+                                Calculando delivery…
+                              </span>
+                            )}
+                            {o.direccion && delivery?.status === "error" && (
+                              <span className="text-xs text-red-500">
+                                No se pudo calcular el delivery.
+                              </span>
+                            )}
+                            {o.direccion && delivery?.status === "done" && (
+                              <span
+                                className="inline-flex items-center gap-1 rounded-full border border-violet-200 bg-violet-50 px-2 py-0.5 text-xs font-medium text-violet-700"
+                                title={
+                                  delivery.free
+                                    ? "Entrega gratis en Florence"
+                                    : `${delivery.distanceMiles.toFixed(1)} millas · $1/milla`
+                                }
+                              >
+                                {delivery.free
+                                  ? "Delivery gratis"
+                                  : `Delivery $${delivery.cost.toFixed(2)} (${delivery.distanceMiles.toFixed(
+                                      1
+                                    )} mi)`}
+                              </span>
                             )}
                           </div>
                         )}
