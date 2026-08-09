@@ -441,7 +441,7 @@ export default function Dashboard() {
                               >
                                 {delivery.free
                                   ? "Delivery gratis"
-                                  : `Delivery $${delivery.cost.toFixed(2)} (${delivery.distanceMiles.toFixed(
+                                  : `Delivery $${delivery.cost} (${delivery.distanceMiles.toFixed(
                                       1
                                     )} mi)`}
                               </span>
